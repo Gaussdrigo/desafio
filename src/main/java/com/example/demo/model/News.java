@@ -6,6 +6,8 @@ public class News {
     private String enlaceFoto;
     private String titulo;
     private String resumen;
+    private String contenidoFoto; // Imagen codificada en Base64
+    private String contentTypeFoto; // Tipo MIME de la imagen
 
     public News(String fecha, String enlace, String enlaceFoto, String titulo, String resumen) {
         this.fecha = fecha;
@@ -54,5 +56,22 @@ public class News {
 
     public void setResumen(String resumen) {
         this.resumen = resumen;
+    }
+
+    // Getters y Setters
+    public String getContenidoFoto() {
+        return contenidoFoto;
+    }
+
+    public void setContenidoFoto(String contenidoFoto) {
+        this.contenidoFoto = contenidoFoto;
+    }
+
+    public String getContentTypeFoto() {
+        return contentTypeFoto;
+    }
+
+    public void setContentTypeFoto(String contentTypeFoto) {
+        this.contentTypeFoto = contentTypeFoto;
     }
 }

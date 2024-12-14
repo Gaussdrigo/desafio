@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noticias API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .news-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .news-item {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            width: 300px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .news-item img {
+            max-width: 100%;
+            border-radius: 5px;
+        }
+        .news-item h3 {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+        .news-item p {
+            font-size: 14px;
+            color: #555;
+        }
+        .news-item a {
+            color: #007BFF;
+            text-decoration: none;
+        }
+        .news-item a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>Búsqueda de Noticias</h1>
+    <form id="searchForm">
+        <input type="text" id="query" placeholder="Escribe tu búsqueda..." required>
+        <button type="submit">Buscar</button>
+    </form>
+    <div id="results" class="news-container"></div>
+
+    <script>
+        const form = document.getElementById("searchForm");
+        const resultsContainer = document.getElementById("results");
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault(); // Evitar que el formulario recargue la página
+
+            const query = document.getElementById("query").value;
+
+            if (!query) {
+                alert("Por favor, ingresa un término de búsqueda.");
+                return;
+            }
+
+            // Limpiar resultados anteriores
+            resultsContainer.innerHTML = "<p>Cargando resultados...</p>";
+
+            try {
+                // Realizar solicitud al backend
+                const response = await fetch(`/consulta?q=${query}`);
+                if (!response.ok) {
+                    throw new Error("Error al obtener los datos. Inténtalo de nuevo.");
+                }
+
+                const newsList = await response.json();
+                
+                // Limpiar resultados anteriores
+                resultsContainer.innerHTML = "";
+
+                // Mostrar resultados en el HTML
+                if (newsList.length === 0) {
+                    resultsContainer.innerHTML = "<p>No se encontraron noticias.</p>";
+                    return;
+                }
+
+                newsList.forEach((news) => {
+                    const newsItem = document.createElement("div");
+                    newsItem.className = "news-item";
+
+                    newsItem.innerHTML = `
+                        <img src="${news.enlaceFoto}" alt="Imagen de noticia">
+                        <h3>${news.titulo}</h3>
+                        <p>${news.resumen}</p>
+                        <p><strong>Fecha:</strong> ${news.fecha}</p>
+                        <a href="${news.enlace}" target="_blank">Leer más</a>
+                    `;
+
+                    resultsContainer.appendChild(newsItem);
+                });
+            } catch (error) {
+                resultsContainer.innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>
