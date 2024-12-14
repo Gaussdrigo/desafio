@@ -1,5 +1,4 @@
 # desafio
-
 # API de Noticias - Desafío Finalizado
 
 Este proyecto es una API RESTful para consultar noticias del sitio ABC y devolver los resultados en múltiples formatos (JSON, XML, HTML, Texto Plano). La API soporta paginación, codificación de imágenes en Base64, y es segura gracias al uso de una API Key y firmas HMAC-SHA256.
