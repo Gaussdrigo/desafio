@@ -1,4 +1,5 @@
 # desafio
+
 # API de Noticias - Desafío Finalizado
 
 Este proyecto es una API RESTful para consultar noticias del sitio ABC y devolver los resultados en múltiples formatos (JSON, XML, HTML, Texto Plano). La API soporta paginación, codificación de imágenes en Base64, y es segura gracias al uso de una API Key y firmas HMAC-SHA256.
@@ -34,7 +35,7 @@ Asegúrate de tener las siguientes herramientas instaladas en tu máquina:
 4. **Ejecutar el Proyecto con**:
    mvn spring-boot:run
 
-5. **Utilizar Postman u otra herramienta de preferencia para la prueba de los endpoints**:
+5. **Utilizar la Documentacion Swagger, Postman u otra herramienta de preferencia para la prueba de los endpoints**:
    GET Ejemplo: http://localhost:8080/consulta?q=arrecife&page=1&size=2&f=true
    Donde q de tipo cadena
    page int positvo
@@ -44,6 +45,8 @@ Asegúrate de tener las siguientes herramientas instaladas en tu máquina:
    user:admin
    pass:admin
    headers
-   key: x-api-key value: mi-api-key-valida
-   key: x-api-signature value: (firma generada al correr la aplicacion)
-   key: Accept value: application/json o application/xml o application/html o application/text
+   key: x-api-key value: mi-api-key-valida (cargada por defecto en la BD como apikey valida)
+   key: Accept value: application/json o application/xml o text/html o application/text
+6. **Prueba con la interfaz de Swagger**:
+   Una vez levantado el proyecto acceder a la siguiente url:
+   http://localhost:8080/swagger-ui/index.html en el navegador de su preferencia y colocar los parametros correspondientes especificados en el punto anterior
