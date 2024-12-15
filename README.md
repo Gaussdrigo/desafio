@@ -50,3 +50,5 @@ Asegúrate de tener las siguientes herramientas instaladas en tu máquina:
 6. **Prueba con la interfaz de Swagger**:
    Una vez levantado el proyecto acceder a la siguiente url:
    http://localhost:8080/swagger-ui/index.html en el navegador de su preferencia y colocar los parametros correspondientes especificados en el punto anterior
+   OBS: si se especifica f como true pero en la respuesta se obtiene null el encode indica que la
+   noticia original en la pagina no posee imagen definida en nigun formato tradicional (jpg,png etc)
