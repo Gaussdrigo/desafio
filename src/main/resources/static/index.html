@@ -68,14 +68,22 @@
             resultsContainer.innerHTML = "<p>Cargando resultados...</p>";
 
             try {
-                // Realizar solicitud al backend
-                const response = await fetch(`/consulta?q=${query}`);
+                // Realizar solicitud al backend con encabezados
+                const response = await fetch(`http://localhost:8080/consulta?q=${query}`, {
+                    method: "GET",
+                    headers: {
+                        "x-api-key": "mi-api-key-valida", // API Key válida
+                        "x-api-signature": "2l0W8uztf8Mlwcy9cW8XOPeS04/X86ge3eIkiwVwr6c=", // Firma HMAC
+                        "Accept": "application/json" // Solicitar formato JSON
+                    }
+                });
+
                 if (!response.ok) {
-                    throw new Error("Error al obtener los datos. Inténtalo de nuevo.");
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
                 }
 
                 const newsList = await response.json();
-                
+
                 // Limpiar resultados anteriores
                 resultsContainer.innerHTML = "";
 
@@ -90,7 +98,7 @@
                     newsItem.className = "news-item";
 
                     newsItem.innerHTML = `
-                        <img src="${news.enlaceFoto}" alt="Imagen de noticia">
+                        ${news.enlaceFoto ? `<img src="${news.enlaceFoto}" alt="Imagen de noticia">` : ''}
                         <h3>${news.titulo}</h3>
                         <p>${news.resumen}</p>
                         <p><strong>Fecha:</strong> ${news.fecha}</p>
