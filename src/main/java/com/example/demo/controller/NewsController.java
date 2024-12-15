@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.model.News;
 import com.example.demo.service.ApiKeyService;
 import com.example.demo.service.JsonFetcherService;
+import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -26,14 +27,15 @@ public class NewsController {
         this.apiKeyService = apiKeyService;
     }
 
-    @GetMapping
+    @GetMapping(produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE,
+            MediaType.TEXT_PLAIN_VALUE, MediaType.TEXT_HTML_VALUE })
     public ResponseEntity<?> getFormattedNews(
             @RequestParam(required = false) String q,
             @RequestParam(required = false, defaultValue = "false") boolean f,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestHeader(value = "x-api-key", required = true) String apiKey,
-            @RequestHeader(HttpHeaders.ACCEPT) String acceptHeader) {
+            @Parameter(description = "API Key requerida", required = true) @RequestHeader(value = "x-api-key") String apiKey,
+            @Parameter(description = "Tipo de formato: application/json, application/xml, text/plain, text/html", required = false) @RequestHeader(value = HttpHeaders.ACCEPT, defaultValue = MediaType.APPLICATION_JSON_VALUE) String acceptHeader) {
 
         // Validar API Key
         if (apiKey == null || !apiKeyService.isValidApiKey(apiKey)) {
@@ -49,25 +51,22 @@ public class NewsController {
 
         // Obtener todas las noticias
         List<News> allResults = jsonFetcherService.fetchAndFormatJson(q);
-
-        // Si no hay resultados
         if (allResults.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("codigo", "g267", "error", "No se encuentran noticias para el texto: " + q));
         }
 
-        // Validar paginación
+        // Paginación
         if (page < 0 || size <= 0) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("codigo", "g268", "error",
-                            "Parámetros de paginación inválidos. 'page' debe ser >= 0 y 'size' > 0."));
+                    .body(Map.of("codigo", "g268", "error", "Parámetros de paginación inválidos."));
         }
         int start = page * size;
+        int end = Math.min(start + size, allResults.size());
         if (start >= allResults.size()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("codigo", "g267", "error", "No hay más noticias disponibles para la paginación."));
+                    .body(Map.of("codigo", "g267", "error", "No hay más noticias disponibles."));
         }
-        int end = Math.min(start + size, allResults.size());
         List<News> paginatedResults = allResults.subList(start, end);
 
         // Procesar imágenes si `f=true`
@@ -75,75 +74,58 @@ public class NewsController {
             paginatedResults.forEach(news -> {
                 if (news.getEnlaceFoto() != null) {
                     String base64Content = jsonFetcherService.encodeImageToBase64(news.getEnlaceFoto());
-                    if (base64Content != null) {
-                        news.setContenidoFoto(base64Content);
-                        news.setContentTypeFoto("image/jpeg");
-                    }
+                    news.setContenidoFoto(base64Content);
+                    news.setContentTypeFoto("image/jpeg");
                 }
             });
         }
 
-        // Generar respuesta en el formato solicitado
-        switch (acceptHeader) {
-            case MediaType.APPLICATION_JSON_VALUE:
-                // Incluye metadatos de paginación
-                Map<String, Object> response = new HashMap<>();
-                response.put("currentPage", page);
-                response.put("pageSize", size);
-                response.put("totalResults", allResults.size());
-                response.put("totalPages", (int) Math.ceil((double) allResults.size() / size));
-                response.put("news", paginatedResults);
-                return ResponseEntity.ok(response);
+        // Respuesta basada en el encabezado "Accept"
+        return switch (acceptHeader) {
+            case MediaType.APPLICATION_JSON_VALUE -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+                    .body(buildJsonResponse(page, size, allResults.size(), paginatedResults));
 
-            case MediaType.APPLICATION_XML_VALUE:
-                // Convertir a XML
-                String xml = convertToXml(paginatedResults);
-                return ResponseEntity.ok()
-                        .contentType(MediaType.APPLICATION_XML)
-                        .body(xml);
+            case MediaType.APPLICATION_XML_VALUE -> ResponseEntity.ok().contentType(MediaType.APPLICATION_XML)
+                    .body(convertToXml(paginatedResults));
 
-            case MediaType.TEXT_PLAIN_VALUE:
-                // Texto plano
-                String plainText = paginatedResults.stream()
-                        .map(news -> news.getTitulo() + " - " + news.getFecha())
-                        .collect(Collectors.joining("\n"));
-                return ResponseEntity.ok()
-                        .contentType(MediaType.TEXT_PLAIN)
-                        .body(plainText);
+            case MediaType.TEXT_PLAIN_VALUE -> ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN)
+                    .body(paginatedResults.stream()
+                            .map(news -> news.getTitulo() + " - " + news.getFecha())
+                            .collect(Collectors.joining("\n")));
 
-            case MediaType.TEXT_HTML_VALUE:
-                // HTML simple
-                String html = "<ul>" +
-                        paginatedResults.stream()
-                                .map(news -> "<li><b>" + news.getTitulo() + "</b> (" + news.getFecha() + ")</li>")
-                                .collect(Collectors.joining())
-                        +
-                        "</ul>";
-                return ResponseEntity.ok()
-                        .contentType(MediaType.TEXT_HTML)
-                        .body(html);
+            case MediaType.TEXT_HTML_VALUE -> ResponseEntity.ok().contentType(MediaType.TEXT_HTML)
+                    .body(buildHtmlResponse(paginatedResults));
 
-            default:
-                // Formato no soportado
-                return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE)
-                        .body(Map.of("codigo", "g400", "error", "Formato no soportado: " + acceptHeader));
-        }
+            default -> ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE)
+                    .body(Map.of("codigo", "g400", "error", "Formato no soportado: " + acceptHeader));
+        };
     }
 
-    // Método auxiliar para convertir a XML
+    private Map<String, Object> buildJsonResponse(int page, int size, int totalResults, List<News> results) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("currentPage", page);
+        response.put("pageSize", size);
+        response.put("totalResults", totalResults);
+        response.put("totalPages", (int) Math.ceil((double) totalResults / size));
+        response.put("news", results);
+        return response;
+    }
+
     private String convertToXml(List<News> newsList) {
-        StringBuilder xmlBuilder = new StringBuilder();
-        xmlBuilder.append("<newsList>");
+        StringBuilder xmlBuilder = new StringBuilder("<newsList>");
         for (News news : newsList) {
             xmlBuilder.append("<news>")
                     .append("<fecha>").append(news.getFecha()).append("</fecha>")
-                    .append("<enlace>").append(news.getEnlace()).append("</enlace>")
-                    .append("<enlaceFoto>").append(news.getEnlaceFoto()).append("</enlaceFoto>")
                     .append("<titulo>").append(news.getTitulo()).append("</titulo>")
-                    .append("<resumen>").append(news.getResumen()).append("</resumen>")
                     .append("</news>");
         }
         xmlBuilder.append("</newsList>");
         return xmlBuilder.toString();
+    }
+
+    private String buildHtmlResponse(List<News> results) {
+        return "<ul>" + results.stream()
+                .map(news -> "<li><b>" + news.getTitulo() + "</b> (" + news.getFecha() + ")</li>")
+                .collect(Collectors.joining()) + "</ul>";
     }
 }
